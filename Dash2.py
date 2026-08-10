@@ -63,7 +63,7 @@ st.markdown("""
 @st.cache_data
 def load_data():
 
-    df = pd.read_excel("../Dataset/Credir_Card_Bank.xlsx")
+    df = pd.read_excel("Credir_Card_Bank.xlsx")
 
     return df
 
