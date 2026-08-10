@@ -235,7 +235,7 @@ with c4:
     avg_age = final_df["Age"].mean()
 
     st.metric(
-        "🎂 Average Age",
+        "Average Age",
         f"{avg_age:.1f}"
     )
 
