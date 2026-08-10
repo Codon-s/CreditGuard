@@ -8,71 +8,87 @@ import plotly.express as px
 # =========================================================
 
 st.set_page_config(
-    page_title="Credit Card Spending Analytics",
+    page_title="Credit Card Analytics",
     page_icon="💳",
     layout="wide"
 )
 
 
 # =========================================================
-# CUSTOM CSS
+# TITLE
 # =========================================================
 
-st.markdown("""
-<style>
+st.title("💳 Credit Card Customer Analytics")
+st.caption("Interactive Customer Spending & Financial Behaviour Dashboard")
 
-.main {
-    background-color: #f5f7fa;
-}
 
-.block-container {
-    padding-top: 2rem;
-}
+# =========================================================
+# FILE UPLOAD
+# =========================================================
 
-.dashboard-title {
-    font-size: 40px;
-    font-weight: 700;
-    color: #17365D;
-    text-align: center;
-    margin-bottom: 5px;
-}
+st.sidebar.header("📂 Upload Dataset")
 
-.dashboard-subtitle {
-    text-align: center;
-    color: #666;
-    font-size: 18px;
-    margin-bottom: 30px;
-}
+uploaded_file = st.sidebar.file_uploader(
+    "Upload Credit Card Excel File",
+    type=["xlsx", "xls"]
+)
 
-.metric-card {
-    background-color: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0px 3px 12px rgba(0,0,0,0.08);
-    text-align: center;
-}
 
-</style>
-""", unsafe_allow_html=True)
+# =========================================================
+# STOP IF NO FILE
+# =========================================================
+
+if uploaded_file is None:
+
+    st.info("👈 Please upload your Excel dataset from the sidebar.")
+
+    st.markdown("""
+    ### Expected Dataset
+
+    Your Excel file should contain columns such as:
+
+    - Customer_ID
+    - Age
+    - Gender
+    - Occupation
+    - Employment_Type
+    - Residential_Status
+    - PAN_Verified
+    - KYC_Status
+    - Fraud_Flag
+    - Loan_Count
+    - Annual_Income
+    - Avg_Monthly_Spending
+    - EMI_Group
+    - DTI_Group
+    - Savings_Group
+    - Investment_Group
+    - Transaction_Group
+    - Utilization_Group
+    """)
+
+    st.stop()
 
 
 # =========================================================
 # LOAD DATA
 # =========================================================
 
-@st.cache_data
-def load_data():
+try:
 
-    df = pd.read_excel("Credir_Card_Bank.xlsx")
+    df = pd.read_excel(uploaded_file)
 
-    return df
+except Exception as e:
 
+    st.error("❌ Unable to read the Excel file.")
 
-df = load_data()
+    st.exception(e)
+
+    st.stop()
 
 
 # =========================================================
-# AGE GROUP FUNCTION
+# AGE GROUP
 # =========================================================
 
 def age_group(age):
@@ -97,80 +113,58 @@ df["Age_Group"] = df["Age"].apply(age_group)
 
 
 # =========================================================
-# TITLE
-# =========================================================
-
-st.markdown(
-    '<div class="dashboard-title">💳 Credit Card Spending Analytics</div>',
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    '<div class="dashboard-subtitle">'
-    'Interactive Customer Spending & Financial Behaviour Dashboard'
-    '</div>',
-    unsafe_allow_html=True
-)
-
-
-# =========================================================
 # SIDEBAR FILTERS
 # =========================================================
 
-st.sidebar.title("🎛️ Dashboard Filters")
+st.sidebar.markdown("---")
+st.sidebar.header("🎛️ Filters")
 
-st.sidebar.markdown("### Customer Segmentation")
 
+# Employment
 
-# Employment Type
-
-employment_options = ["All"] + sorted(
+employment_list = sorted(
     df["Employment_Type"].dropna().unique().tolist()
 )
 
-selected_emp = st.sidebar.selectbox(
+selected_employment = st.sidebar.selectbox(
     "Employment Type",
-    employment_options
+    ["All"] + employment_list
 )
 
 
-if selected_emp != "All":
+if selected_employment != "All":
 
-    filtered_emp = df[
-        df["Employment_Type"] == selected_emp
+    temp_df = df[
+        df["Employment_Type"] == selected_employment
     ]
 
 else:
 
-    filtered_emp = df.copy()
+    temp_df = df.copy()
 
 
 # Occupation
 
-occupation_options = ["All"] + sorted(
-    filtered_emp["Occupation"].dropna().unique().tolist()
+occupation_list = sorted(
+    temp_df["Occupation"].dropna().unique().tolist()
 )
 
-selected_occ = st.sidebar.selectbox(
+selected_occupation = st.sidebar.selectbox(
     "Occupation",
-    occupation_options
+    ["All"] + occupation_list
 )
 
 
-if selected_occ != "All":
+if selected_occupation != "All":
 
-    filtered_occ = filtered_emp[
-        filtered_emp["Occupation"] == selected_occ
+    temp_df = temp_df[
+        temp_df["Occupation"] == selected_occupation
     ]
-
-else:
-
-    filtered_occ = filtered_emp.copy()
 
 
 # Age Group
 
-age_options = ["All"] + [
+age_list = [
     "Teen",
     "Young Adult",
     "Adult",
@@ -180,77 +174,43 @@ age_options = ["All"] + [
 
 selected_age = st.sidebar.selectbox(
     "Age Group",
-    age_options
+    ["All"] + age_list
 )
 
 
 if selected_age != "All":
 
-    final_df = filtered_occ[
-        filtered_occ["Age_Group"] == selected_age
+    temp_df = temp_df[
+        temp_df["Age_Group"] == selected_age
     ]
 
-else:
 
-    final_df = filtered_occ.copy()
-
-
-# =========================================================
-# RESET / INFO
-# =========================================================
-
-st.sidebar.markdown("---")
-
-st.sidebar.info(
-    f"Showing **{len(final_df):,} customers**"
-)
+final_df = temp_df.copy()
 
 
 # =========================================================
-# KPI SECTION
+# KPI
 # =========================================================
 
-st.markdown("## 📌 Customer Overview")
+st.subheader("📌 Customer Overview")
 
-if len(final_df) > 0:
 
-    total_customers = len(final_df)
+c1, c2, c3, c4 = st.columns(4)
+
+
+with c1:
+
+    st.metric(
+        "👥 Customers",
+        f"{len(final_df):,}"
+    )
+
+
+with c2:
 
     avg_spending = final_df[
         "Avg_Monthly_Spending"
     ].mean()
-
-    avg_income = final_df[
-        "Annual_Income"
-    ].mean()
-
-    total_spending = final_df[
-        "Avg_Monthly_Spending"
-    ].sum()
-
-    avg_age = final_df["Age"].mean()
-
-else:
-
-    total_customers = 0
-    avg_spending = 0
-    avg_income = 0
-    total_spending = 0
-    avg_age = 0
-
-
-col1, col2, col3, col4, col5 = st.columns(5)
-
-
-with col1:
-
-    st.metric(
-        "👥 Customers",
-        f"{total_customers:,}"
-    )
-
-
-with col2:
 
     st.metric(
         "💳 Avg Monthly Spending",
@@ -258,7 +218,11 @@ with col2:
     )
 
 
-with col3:
+with c3:
+
+    avg_income = final_df[
+        "Annual_Income"
+    ].mean()
 
     st.metric(
         "💰 Avg Annual Income",
@@ -266,15 +230,9 @@ with col3:
     )
 
 
-with col4:
+with c4:
 
-    st.metric(
-        "📊 Total Spending",
-        f"₹{total_spending:,.0f}"
-    )
-
-
-with col5:
+    avg_age = final_df["Age"].mean()
 
     st.metric(
         "🎂 Average Age",
@@ -289,12 +247,14 @@ st.markdown("---")
 # TABS
 # =========================================================
 
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 Spending Overview",
-    "👥 Customer Behaviour",
-    "💰 Financial Behaviour",
-    "📋 Customer Data"
-])
+tab1, tab2, tab3, tab4 = st.tabs(
+    [
+        "📊 Spending",
+        "👥 Customer Behaviour",
+        "💰 Financial Behaviour",
+        "📋 Data"
+    ]
+)
 
 
 # =========================================================
@@ -303,102 +263,18 @@ tab1, tab2, tab3, tab4 = st.tabs([
 
 with tab1:
 
-    st.subheader("📊 Spending Overview")
+    st.header("📊 Spending Analysis")
 
 
     # -----------------------------------------
-    # 1. Monthly Spending Distribution
+    # Spending Distribution
     # -----------------------------------------
 
-    col1, col2 = st.columns(2)
-
-
-    with col1:
-
-        fig = px.histogram(
-            final_df,
-            x="Avg_Monthly_Spending",
-            nbins=20,
-            title="Monthly Spending Distribution",
-            labels={
-                "Avg_Monthly_Spending":
-                "Average Monthly Spending"
-            }
-        )
-
-        fig.update_layout(
-            height=450,
-            template="plotly_white"
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-
-
-    # -----------------------------------------
-    # 2. Spending by Age Group
-    # -----------------------------------------
-
-    with col2:
-
-        age = (
-            final_df
-            .groupby(
-                "Age_Group",
-                observed=True
-            )["Avg_Monthly_Spending"]
-            .mean()
-            .reset_index()
-        )
-
-        fig = px.bar(
-            age,
-            x="Age_Group",
-            y="Avg_Monthly_Spending",
-            title="Average Spending by Age Group",
-            text_auto=".2s"
-        )
-
-        fig.update_layout(
-            height=450,
-            template="plotly_white"
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-
-
-    # -----------------------------------------
-    # 3. Occupation
-    # -----------------------------------------
-
-    occupation = (
-        final_df
-        .groupby("Occupation")
-        ["Avg_Monthly_Spending"]
-        .mean()
-        .reset_index()
-        .sort_values(
-            "Avg_Monthly_Spending"
-        )
-    )
-
-    fig = px.bar(
-        occupation,
+    fig = px.histogram(
+        final_df,
         x="Avg_Monthly_Spending",
-        y="Occupation",
-        orientation="h",
-        title="Average Spending by Occupation",
-        text_auto=".2s"
-    )
-
-    fig.update_layout(
-        height=500,
-        template="plotly_white"
+        nbins=20,
+        title="Monthly Spending Distribution"
     )
 
     st.plotly_chart(
@@ -408,10 +284,64 @@ with tab1:
 
 
     # -----------------------------------------
-    # 4. Employment Type
+    # Age Group
     # -----------------------------------------
 
-    employment = (
+    age_data = (
+        final_df
+        .groupby("Age_Group")
+        ["Avg_Monthly_Spending"]
+        .mean()
+        .reset_index()
+    )
+
+    fig = px.bar(
+        age_data,
+        x="Age_Group",
+        y="Avg_Monthly_Spending",
+        title="Average Spending by Age Group",
+        text_auto=".2s"
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+
+    # -----------------------------------------
+    # Occupation
+    # -----------------------------------------
+
+    occupation_data = (
+        final_df
+        .groupby("Occupation")
+        ["Avg_Monthly_Spending"]
+        .mean()
+        .reset_index()
+        .sort_values("Avg_Monthly_Spending")
+    )
+
+    fig = px.bar(
+        occupation_data,
+        x="Avg_Monthly_Spending",
+        y="Occupation",
+        orientation="h",
+        title="Average Spending by Occupation",
+        text_auto=".2s"
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+
+    # -----------------------------------------
+    # Employment Type
+    # -----------------------------------------
+
+    employment_data = (
         final_df
         .groupby("Employment_Type")
         ["Avg_Monthly_Spending"]
@@ -420,16 +350,11 @@ with tab1:
     )
 
     fig = px.bar(
-        employment,
+        employment_data,
         x="Employment_Type",
         y="Avg_Monthly_Spending",
         title="Average Spending by Employment Type",
         text_auto=".2s"
-    )
-
-    fig.update_layout(
-        height=450,
-        template="plotly_white"
     )
 
     st.plotly_chart(
@@ -439,15 +364,12 @@ with tab1:
 
 
     # -----------------------------------------
-    # 5. Top 10 Customers
+    # Top 10 Customers
     # -----------------------------------------
 
-    top10 = (
-        final_df
-        .nlargest(
-            10,
-            "Avg_Monthly_Spending"
-        )
+    top10 = final_df.nlargest(
+        10,
+        "Avg_Monthly_Spending"
     )
 
     fig = px.bar(
@@ -458,12 +380,6 @@ with tab1:
         text_auto=".2s"
     )
 
-    fig.update_layout(
-        xaxis_tickangle=-45,
-        height=450,
-        template="plotly_white"
-    )
-
     st.plotly_chart(
         fig,
         use_container_width=True
@@ -471,25 +387,20 @@ with tab1:
 
 
     # -----------------------------------------
-    # 6. Income vs Spending
+    # Income vs Spending
     # -----------------------------------------
 
     fig = px.scatter(
         final_df,
         x="Annual_Income",
         y="Avg_Monthly_Spending",
-        title="Annual Income vs Monthly Spending",
         hover_data=[
             "Customer_ID",
             "Age",
-            "Occupation",
-            "Employment_Type"
-        ]
-    )
-
-    fig.update_layout(
-        height=500,
-        template="plotly_white"
+            "Gender",
+            "Occupation"
+        ],
+        title="Annual Income vs Monthly Spending"
     )
 
     st.plotly_chart(
@@ -504,7 +415,7 @@ with tab1:
 
 with tab2:
 
-    st.subheader("👥 Customer Behaviour Analysis")
+    st.header("👥 Customer Behaviour")
 
 
     col1, col2 = st.columns(2)
@@ -514,7 +425,7 @@ with tab2:
 
     with col1:
 
-        gender = (
+        data = (
             final_df
             .groupby("Gender")
             ["Avg_Monthly_Spending"]
@@ -523,15 +434,11 @@ with tab2:
         )
 
         fig = px.bar(
-            gender,
+            data,
             x="Gender",
             y="Avg_Monthly_Spending",
             title="Spending by Gender",
             text_auto=".2s"
-        )
-
-        fig.update_layout(
-            template="plotly_white"
         )
 
         st.plotly_chart(
@@ -540,11 +447,11 @@ with tab2:
         )
 
 
-    # Residential Status
+    # Residential
 
     with col2:
 
-        residential = (
+        data = (
             final_df
             .groupby("Residential_Status")
             ["Avg_Monthly_Spending"]
@@ -553,15 +460,11 @@ with tab2:
         )
 
         fig = px.bar(
-            residential,
+            data,
             x="Residential_Status",
             y="Avg_Monthly_Spending",
             title="Spending by Residential Status",
             text_auto=".2s"
-        )
-
-        fig.update_layout(
-            template="plotly_white"
         )
 
         st.plotly_chart(
@@ -577,7 +480,7 @@ with tab2:
 
     with col1:
 
-        pan = (
+        data = (
             final_df
             .groupby("PAN_Verified")
             ["Avg_Monthly_Spending"]
@@ -586,7 +489,7 @@ with tab2:
         )
 
         fig = px.bar(
-            pan,
+            data,
             x="PAN_Verified",
             y="Avg_Monthly_Spending",
             title="PAN Verification",
@@ -603,7 +506,7 @@ with tab2:
 
     with col2:
 
-        kyc = (
+        data = (
             final_df
             .groupby("KYC_Status")
             ["Avg_Monthly_Spending"]
@@ -612,7 +515,7 @@ with tab2:
         )
 
         fig = px.bar(
-            kyc,
+            data,
             x="KYC_Status",
             y="Avg_Monthly_Spending",
             title="KYC Status",
@@ -629,7 +532,7 @@ with tab2:
 
     with col3:
 
-        fraud = (
+        data = (
             final_df
             .groupby("Fraud_Flag")
             ["Avg_Monthly_Spending"]
@@ -638,7 +541,7 @@ with tab2:
         )
 
         fig = px.bar(
-            fraud,
+            data,
             x="Fraud_Flag",
             y="Avg_Monthly_Spending",
             title="Fraud Flag",
@@ -653,7 +556,7 @@ with tab2:
 
     # Loan Count
 
-    loan = (
+    data = (
         final_df
         .groupby("Loan_Count")
         ["Avg_Monthly_Spending"]
@@ -662,15 +565,11 @@ with tab2:
     )
 
     fig = px.bar(
-        loan,
+        data,
         x="Loan_Count",
         y="Avg_Monthly_Spending",
         title="Spending by Loan Count",
         text_auto=".2s"
-    )
-
-    fig.update_layout(
-        template="plotly_white"
     )
 
     st.plotly_chart(
@@ -685,7 +584,7 @@ with tab2:
 
 with tab3:
 
-    st.subheader("💰 Financial Behaviour Analysis")
+    st.header("💰 Financial Behaviour")
 
 
     col1, col2 = st.columns(2)
@@ -695,7 +594,7 @@ with tab3:
 
     with col1:
 
-        emi = (
+        data = (
             final_df
             .groupby(
                 "EMI_Group",
@@ -706,7 +605,7 @@ with tab3:
         )
 
         fig = px.bar(
-            emi,
+            data,
             x="EMI_Group",
             y="Avg_Monthly_Spending",
             title="Spending by EMI Group",
@@ -723,7 +622,7 @@ with tab3:
 
     with col2:
 
-        dti = (
+        data = (
             final_df
             .groupby(
                 "DTI_Group",
@@ -734,7 +633,7 @@ with tab3:
         )
 
         fig = px.line(
-            dti,
+            data,
             x="DTI_Group",
             y="Avg_Monthly_Spending",
             markers=True,
@@ -747,14 +646,14 @@ with tab3:
         )
 
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
 
     # Savings
 
     with col1:
 
-        saving = (
+        data = (
             final_df
             .groupby(
                 "Savings_Group",
@@ -765,10 +664,9 @@ with tab3:
         )
 
         fig = px.bar(
-            saving,
-            x="Avg_Monthly_Spending",
-            y="Savings_Group",
-            orientation="h",
+            data,
+            x="Savings_Group",
+            y="Avg_Monthly_Spending",
             title="Savings Balance",
             text_auto=".2s"
         )
@@ -783,7 +681,7 @@ with tab3:
 
     with col2:
 
-        invest = (
+        data = (
             final_df
             .groupby(
                 "Investment_Group",
@@ -794,7 +692,7 @@ with tab3:
         )
 
         fig = px.bar(
-            invest,
+            data,
             x="Investment_Group",
             y="Avg_Monthly_Spending",
             title="Investment Value",
@@ -807,11 +705,14 @@ with tab3:
         )
 
 
+    col1, col2 = st.columns(2)
+
+
     # Transactions
 
-    with col3:
+    with col1:
 
-        tran = (
+        data = (
             final_df
             .groupby(
                 "Transaction_Group",
@@ -822,7 +723,7 @@ with tab3:
         )
 
         fig = px.line(
-            tran,
+            data,
             x="Transaction_Group",
             y="Avg_Monthly_Spending",
             markers=True,
@@ -835,46 +736,44 @@ with tab3:
         )
 
 
-    # Credit Utilization
+    # Utilization
 
-    util = (
-        final_df
-        .groupby(
-            "Utilization_Group",
-            observed=True
-        )["Avg_Monthly_Spending"]
-        .mean()
-        .reset_index()
-    )
+    with col2:
 
-    fig = px.bar(
-        util,
-        x="Utilization_Group",
-        y="Avg_Monthly_Spending",
-        title="Credit Utilization",
-        text_auto=".2s"
-    )
+        data = (
+            final_df
+            .groupby(
+                "Utilization_Group",
+                observed=True
+            )["Avg_Monthly_Spending"]
+            .mean()
+            .reset_index()
+        )
 
-    fig.update_layout(
-        template="plotly_white"
-    )
+        fig = px.bar(
+            data,
+            x="Utilization_Group",
+            y="Avg_Monthly_Spending",
+            title="Credit Utilization",
+            text_auto=".2s"
+        )
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 
 
 # =========================================================
-# TAB 4 - CUSTOMER DATA
+# TAB 4
 # =========================================================
 
 with tab4:
 
-    st.subheader("📋 Filtered Customer Dataset")
+    st.header("📋 Customer Data")
 
     st.write(
-        f"Displaying **{len(final_df):,} customers**"
+        f"Showing **{len(final_df):,} customers**"
     )
 
     st.dataframe(
@@ -892,10 +791,10 @@ with tab4:
 
 
     st.download_button(
-        label="⬇️ Download Filtered Data",
-        data=csv,
-        file_name="filtered_credit_card_customers.csv",
-        mime="text/csv"
+        "⬇️ Download Filtered Data",
+        csv,
+        "filtered_credit_card_data.csv",
+        "text/csv"
     )
 
 
@@ -905,7 +804,6 @@ with tab4:
 
 st.markdown("---")
 
-st.markdown(
-    "<center>💳 Credit Card Customer Analytics Dashboard</center>",
-    unsafe_allow_html=True
+st.caption(
+    "💳 Credit Card Customer Spending Analytics Dashboard"
 )
